@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -18,14 +19,36 @@ struct client_conf_st client_conf = {
     .rcvport = DEFAULT_RCVPORT,
     .mgroup = DEFAULT_MGROUP,
     .player_cmd = DEFAULT_PLAYERCMD
-}
+};
 
 static void printhelp(void)
 {
-    printf("-P --port       指定接收端口\n
-            -M --mgroup     指定多播组\n
-            -p --player     指定播放器命令行\n 
+    printf("-P --port       指定接收端口\n\
+            -M --mgroup     指定多播组\n\
+            -p --player     指定播放器命令行\n\
             -H --help       显示帮助\n");
+}
+
+static ssize_t writen(int fd, const char *buf, size_t len)
+{
+    int pos = 0;
+    int ret;
+
+    while (len > 0)
+    {
+        ret = write(fd, buf + pos, len);
+        if (ret < 0)
+        {
+            if (errno == EINTR)
+                continue;
+            perror("write()");
+            return -1;
+        }
+        len -= ret;
+        pos += ret;
+    }
+
+    return pos;
 }
 
 /*
@@ -36,9 +59,12 @@ static void printhelp(void)
  */
 int main(int argc, char *argv[])
 {
+    pid_t pid;
+    int ret;
+    int len;
     int pd[2];
-    struct sockaddr_in laddr, serveraddr;
-    socklen_t serveraddr_len;
+    struct sockaddr_in laddr, serveraddr, raddr;
+    socklen_t serveraddr_len, raddr_len;
     int c;
     int sd;
     int index = 0;
@@ -140,7 +166,7 @@ int main(int argc, char *argv[])
 
     //parent
     //父进程：从网络上手包，发送给紫禁城
-    
+
     //收节目单
     struct msg_list_st *msg_list;
     msg_list = malloc(MSG_LIST_MAX);
@@ -184,6 +210,39 @@ int main(int argc, char *argv[])
     }
 
     //收频道包，发送给紫禁城
+    struct msg_channel_st *msg_channel;
+    msg_channel = malloc(MSG_CHANNEL_MAX);
+    if (msg_channel == NULL)
+    {
+        perror("malloc()");
+        exit(1);
+    }
+
+    while (1)
+    {
+        len = recvfrom(sd, msg_channel, MSG_CHANNEL_MAX, 0, (void *)&raddr, &raddr_len);
+        if (raddr.sin_addr.s_addr != serveraddr.sin_addr.s_addr || raddr.sin_port != serveraddr.sin_port)
+        {
+            fprintf(stderr, "Ignore: address not math\n");
+            continue;
+        }
+
+        if (len < sizeof(struct msg_channel_st))
+        {
+            fprintf(stderr, "Ignore: message too small\n");
+            continue;
+        }
+
+        if (msg_channel->chnid == choosenid)
+        {
+            fprintf(stdout, "accepted msg: %d recieved\n", msg_channel->chnid);
+            if (writen(pd[1], msg_channel->data, len - sizeof(chnid_t)) < 0)
+                exit(1);
+        }
+    }
+
+    free(msg_channel);
+    close(sd);
 
     exit(0);
 }
