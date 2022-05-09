@@ -37,11 +37,13 @@ static void printhelp(void)
 int main(int argc, char *argv[])
 {
     int pd[2];
-    struct sockaddr_in laddr;
+    struct sockaddr_in laddr, serveraddr;
+    socklen_t serveraddr_len;
     int c;
     int sd;
     int index = 0;
     struct ip_mreqn mreq;
+    int choosenid;
     struct option argarr[] = {{"prot", 1, NULL, 'P'}, {"mgroup", 1, NULL, 'M'}, {"player", 1, NULL, 'p'}, {"help", 0, NULL, 'H'}, {NULL, 0, NULL, 0}};
 
     /*
@@ -137,11 +139,50 @@ int main(int argc, char *argv[])
     }
 
     //parent
-    
     //父进程：从网络上手包，发送给紫禁城
     
     //收节目单
+    struct msg_list_st *msg_list;
+    msg_list = malloc(MSG_LIST_MAX);
+    if (msg_list == NULL)
+    {
+        perror("malloc()");
+        exit(1);
+    }
+
+    while (1)
+    {
+        len = recvfrom(sd, msg_list, MSG_LIST_MAX, 0, (void *)&serveraddr, &serveraddr_len);
+        if (len < sizeof(struct msg_list_st))
+        {
+            fprintf(stderr, "message is too small\n");
+            continue;
+        }
+        if (msg_list->chnid != LISTCHNID)
+        {
+            fprintf(stderr, "chnid is not match\n");
+            continue;
+        }
+        break;
+    }
+
+    //打印节目单并选择频道
+    struct msg_listentry_st *pos;
+    for (pos = msg_list->entry; (char *)pos < (((char *)msg_list) + len); pos = (void *)(((char *)pos) + ntohs(pos->len)))
+    {
+        printf("channel %d : %s\n", pos->chnid, pos->desc);
+    }
+
+    free(msg_list);
+
     //选择频道
+    while (1)
+    {
+        ret = scanf("%d", &choosenid);
+        if (ret != 1)
+            exit(1);
+    }
+
     //收频道包，发送给紫禁城
 
     exit(0);
