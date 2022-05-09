@@ -3,11 +3,15 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <net/if.h>
 
 #include "client.h"
+
+//#include <proto.h>//在Makefile中指定了后，就可以用<>括起来
 #include "../include/proto.h"
 
 struct client_conf_st client_conf = {
@@ -32,8 +36,12 @@ static void printhelp(void)
  */
 int main(int argc, char *argv[])
 {
+    int pd[2];
+    struct sockaddr_in laddr;
     int c;
+    int sd;
     int index = 0;
+    struct ip_mreqn mreq;
     struct option argarr[] = {{"prot", 1, NULL, 'P'}, {"mgroup", 1, NULL, 'M'}, {"player", 1, NULL, 'p'}, {"help", 0, NULL, 'H'}, {NULL, 0, NULL, 0}};
 
     /*
@@ -66,14 +74,66 @@ int main(int argc, char *argv[])
         }
     }
 
-    socket();
+    sd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sd < 0)
+    {
+        perror("socket()");
+        exit(1);
+    }
 
-    pipe();
+    inet_pton(AF_INET, client_conf.mgroup, &mreq.imr_multiaddr);
+    //if error
+    inet_pton(AF_INET, "0.0.0.0", &mreq.imr_address);
+    mreq.imr_ifindex = if_nametoindex("wlp8s0");
 
-    fork();
+    if (setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0)
+    {
+        perror("setsockopt()");
+        exit(1);
+    }
 
-    //紫禁城：调用解码器
+    int val = 1;//true
+    if (setsockopt(sd, IPPROTO_IP, IP_MULTICAST_LOOP, &val, sizeof(val)) < 0)
+    {
+        perror("setsockopt()");
+        exit(1);
+    }
+
+    laddr.sin_family = AF_INET;
+    laddr.sin_port = htons(atoi(client_conf.rcvport));
+    inet_pton(AF_INET, "0.0.0.0", &laddr.sin_addr);
+
+    if (bind(sd, (void *)&laddr, sizeof(laddr)) < 0)
+    {
+        perror("bind()");
+        exit(1);
+    }
+
+    if (pipe(pd) < 0)
+    {
+        perror("pipe()");
+        exit(1);
+    }
+
+    pid = fork();
+    if (pid < 0)
+    {
+        perror("fork()");
+        exit(1);
+    }
+
+    if (pid == 0)//child
+    {
+        //紫禁城：调用解码器
+    }
+
+    //parent
+    
     //父进程：从网络上手包，发送给紫禁城
+    
+    //收节目单
+    //选择频道
+    //收频道包，发送给紫禁城
 
     exit(0);
 }
