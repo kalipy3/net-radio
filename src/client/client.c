@@ -125,6 +125,15 @@ int main(int argc, char *argv[])
     if (pid == 0)//child
     {
         //紫禁城：调用解码器
+        close(sd);
+        close(pd[1]);
+        dup2(pd[0], 0);//pipe的读端转成标准输入
+        if (pd[0] > 0)//pd[0]本身不是标准输入，才关闭pd[0]
+            close(pd[0]);
+
+        execl("bin/sh", "sh", "-c", client_conf.player_cmd, NULL);
+        perror("execl()");
+        exit(1);
     }
 
     //parent
