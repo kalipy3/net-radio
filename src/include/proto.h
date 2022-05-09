@@ -30,6 +30,7 @@ struct msg_channel_st
 struct msg_listentry_st
 {
     chnid_t chnid;
+    uint16_t len;//本结构体长度
     uint8_t desc[1];
 } __attribute__((packed));
 
