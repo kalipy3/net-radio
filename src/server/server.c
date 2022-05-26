@@ -203,19 +203,25 @@ int main(int argc, char *argv[])
     err = mlib_getchnlist(&list, &list_size);
     if (err)
     {
-
+        syslog(LOG_ERR, "mlib_getchnlist():%s.", strerror(err));
+        exit(1);
     }
 
     /*创建节目单线程*/
-    thr_list_create(list, list_size);
-    //if error
+    err = thr_list_create(list, list_size);
+    if (err)
+        exit(1);
 
     /*创建频道线程*/
     int i;
     for (i = 0; i < list_size; i++)
     {
-        thr_channel_create(list + i);    
-        //if error
+        err = thr_channel_create(list + i);    
+        if (err)
+        {
+            fprintf(stderr, "thr_channel_create():%s\n", strerror(err));
+            exit(1);
+        }
     }
 
     syslog(LOG_DEBUG, "%d channel threads created.", i);
