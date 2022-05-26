@@ -41,6 +41,9 @@ struct server_conf_st server_conf = {.rcvport = DEFAULT_RCVPORT,\
         .ifname = DEFAULT_IF
 }
 
+int serversd;
+struct sockaddr_in sndaddr;
+
 static void printfhelp(void)
 {
     printf("-M   指定多播组\n");
@@ -97,9 +100,8 @@ static int daemonize(void)
     return 0;
 }
 
-static socket_init(void)
+static int socket_init(void)
 {
-    int serversd;
     struct ip_mreqn mreq;
 
     serversd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -120,6 +122,12 @@ static socket_init(void)
     }
 
     //bind();
+    
+    sndaddr.sin_family = AF_INET;
+    sndaddr.sin_port = htons(atoi(server_conf.rcvport));
+    inet_pton(AF_INET, server_conf.mgroup, sndaddr.sin_addr.s_addr);
+
+    return 0;
 }
 
 int main(int argc, char *argv[])
