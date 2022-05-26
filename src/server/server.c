@@ -14,6 +14,9 @@
 #include <string.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
 
 
 #include "../include/proto.h"
@@ -93,6 +96,31 @@ static int daemonize(void)
     return 0;
 }
 
+static socket_init(void)
+{
+    int serversd;
+    struct ip_mreqn mreq;
+
+    serversd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (serversd < 0)
+    {
+        syslog(LOG_ERR, "socket():%s", strerror(errno));
+        exit(1);
+    }
+
+    inet_pton(AF_INET, server_conf.mgroup, &mreq.imr_multiaddr);
+    inet_pton(AF_INET, "0.0.0.0", &mreq.imr_address);
+    mreq.imr_ifindex = if_nametoindex(server_conf.ifname);
+
+    if (setsockopt(serversd, IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof(mreq)) < 0)
+    {
+        syslog(LOG_ERR, "setsockopt(IP_MULTICAST_IF):%s", strerror(errno));
+        exit(1);
+    }
+
+    //bind();
+}
+
 int main(int argc, char *argv[])
 {
     int c;
@@ -156,6 +184,7 @@ int main(int argc, char *argv[])
     }
 
     /*SOCKET初始化*/
+    socket_init();
 
     /*获取频道信息*/
 
