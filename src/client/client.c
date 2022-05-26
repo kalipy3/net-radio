@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
         if (pd[0] > 0)//pd[0]本身不是标准输入，才关闭pd[0]
             close(pd[0]);
 
-        execl("bin/sh", "sh", "-c", client_conf.player_cmd, NULL);
+        execl("/bin/sh", "sh", "-c", client_conf.player_cmd, NULL);
         perror("execl()");
         exit(1);
     }
@@ -176,6 +176,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    serveraddr_len = sizeof(serveraddr);
     while (1)
     {
         len = recvfrom(sd, msg_list, MSG_LIST_MAX, 0, (void *)&serveraddr, &serveraddr_len);
@@ -202,7 +203,8 @@ int main(int argc, char *argv[])
     free(msg_list);
 
     //选择频道
-    while (1)
+    puts("Please enter:");
+    while (ret < 1)
     {
         ret = scanf("%d", &choosenid);
         if (ret != 1)
@@ -210,6 +212,8 @@ int main(int argc, char *argv[])
     }
 
     //收频道包，发送给紫禁城
+    fprintf(stdout, "chosenid = %d\n", ret);
+    
     struct msg_channel_st *msg_channel;
     msg_channel = malloc(MSG_CHANNEL_MAX);
     if (msg_channel == NULL)
@@ -218,6 +222,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    raddr_len = sizeof(raddr);
     while (1)
     {
         len = recvfrom(sd, msg_channel, MSG_CHANNEL_MAX, 0, (void *)&raddr, &raddr_len);
