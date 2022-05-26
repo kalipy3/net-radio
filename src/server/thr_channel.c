@@ -3,7 +3,12 @@
 #include <pthread.h>
 #include <syslog.h>
 #include <errno.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
+#include "../include/proto.h"
 #include "thr_channel.h"
 #include "server_conf.h"
 
@@ -18,11 +23,12 @@ static int tid_nextpos = 0;
 
 static void *thr_channel_snder(void *ptr)
 {
+    int len;
     struct msg_channel_st *sbufp;
     struct mlib_listentry_st *ent = ptr;
 
     sbufp = malloc(MSG_CHANNEL_MAX);
-    if (subfp == NULL)
+    if (sbufp == NULL)
     {
         syslog(LOG_ERR, "malloc():%s\n", strerror(errno));
         exit(1);
@@ -34,7 +40,7 @@ static void *thr_channel_snder(void *ptr)
     {
         len = mlib_readchn(ent->chnid, sbufp->data, MAX_DATA);
 
-        if (sendto(serversd, subfp, len + sizeof(chnid_t), 0, (void *)&sndaddr, sizeof(sndaddr)) < 0)
+        if (sendto(serversd, sbufp, len + sizeof(chnid_t), 0, (void *)&sndaddr, sizeof(sndaddr)) < 0)
         {
             syslog(LOG_ERR, "thr_channel(%d):sendto():%s", ent->chnid, strerror(errno));
         }
@@ -75,7 +81,7 @@ int chr_channel_destroy(struct mlib_listentry_st *ptr)
             }
         }
         pthread_join(thr_channel[i].tid, NULL);
-        thr_channel[i] = -1;
+        thr_channel[i].chnid = -1;
         return 0;
     }
 
@@ -89,11 +95,11 @@ int chr_channel_destroyall(void)
         {
             if (pthread_cancel(thr_channel[i].tid) < 0)
             {
-                syslog(LOG_ERR, "pthread_cancel():the thread of channel %d", thr_channel[i]->chnid);
+                syslog(LOG_ERR, "pthread_cancel():the thread of channel %d", thr_channel[i].chnid);
                 return -ESRCH;
             }
-            pthread_join();
-            thr_channel[i] = -1;
+            pthread_join(thr_channel[i].tid, NULL);
+            thr_channel[i].chnid = -1;
         }
     }
 
