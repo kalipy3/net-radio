@@ -10,8 +10,8 @@
 
 #include "medialib.h"
 
-int chr_channel_create(struct mlib_listentry_st *);
-int chr_channel_destroy(struct mlib_listentry_st *); 
-int chr_channel_destroyall(void); 
+int thr_channel_create(struct mlib_listentry_st *);
+int thr_channel_destroy(struct mlib_listentry_st *); 
+int thr_channel_destroyall(void); 
 
 #endif /* !THR_CHANNEL_H */

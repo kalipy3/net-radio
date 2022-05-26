@@ -9,7 +9,7 @@
 #define SERVER_CONF_H
 
 #define DEFAULT_MEDIADIR    "/home/kalipy/gg/media"
-#define DEFAULT_IF  "eth0"
+#define DEFAULT_IF  "wlp8s0"
 
 enum
 {

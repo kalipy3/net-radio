@@ -84,7 +84,7 @@ int thr_list_create(struct mlib_listentry_st *listp, int nr_ent)
     return 0;
 }
 
-int chr_list_destroy(void)
+int thr_list_destroy(void)
 {
     pthread_cancel(tid_list);
     pthread_join(tid_list, NULL);

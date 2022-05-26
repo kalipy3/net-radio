@@ -16,13 +16,15 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 
 
 #include "../include/proto.h"
 #include "server_conf.h"
-#include "server.h"
 #include "medialib.h"
+#include "thr_list.h"
+#include "thr_channel.h"
 
 /*
  * -M   指定多播组
@@ -39,10 +41,11 @@ struct server_conf_st server_conf = {.rcvport = DEFAULT_RCVPORT,\
         .media_dir = DEFAULT_MEDIADIR,\
         .runmode = RUN_DAEMON,\
         .ifname = DEFAULT_IF
-}
+};
 
 int serversd;
 struct sockaddr_in sndaddr;
+static struct mlib_listentry_st *list;
 
 static void printfhelp(void)
 {
@@ -58,9 +61,10 @@ static void daemon_exit(int s)
 {
     thr_list_destroy();
     thr_channel_destroyall();
+    mlib_freechnlist(list);
 
+    syslog(LOG_WARNING, "signal-%d caught, exit now.", s);
     closelog();
-
     exit(0);
 }
 
@@ -125,10 +129,10 @@ static int socket_init(void)
     }
 
     //bind();
-    
+
     sndaddr.sin_family = AF_INET;
     sndaddr.sin_port = htons(atoi(server_conf.rcvport));
-    inet_pton(AF_INET, server_conf.mgroup, sndaddr.sin_addr.s_addr);
+    inet_pton(AF_INET, server_conf.mgroup, &sndaddr.sin_addr.s_addr);
 
     return 0;
 }
@@ -147,41 +151,41 @@ int main(int argc, char *argv[])
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGQUIT, &sa, NULL);
 
-    openlog("netradio", LOG_PID | LOG_PERROR)
+    openlog("netradio", LOG_PID | LOG_PERROR, LOG_DAEMON);
 
-        /*命令行分析*/
+    /*命令行分析*/
 
-        while (1)
+    while (1)
+    {
+        c = getopt(argc, argv, "M:P:FD:I:H");
+        if (c < 0)
+            break;
+        switch (c)
         {
-            c = getopt(argc, argv, "M:P:FD:I:H");
-            if (c < 0)
+            case 'M':
+                server_conf.mgroup = optarg;
                 break;
-            switch (c)
-            {
-                case 'M':
-                    server_conf.mgroup = optarg;
-                    break;
-                case 'P':
-                    server_conf.rcvport = optarg;
-                    break;
-                case 'F':
-                    server_conf.runmode = RUN_FOREGROUND;
-                    break;
-                case 'D':
-                    server_conf.media_dir = optarg;
-                    break;
-                case 'I':
-                    server_conf.ifname = optarg;
-                    break;
-                case 'H':
-                    printfhelp();
-                    exit(0);
-                    break;
-                default:
-                    abort();
-                    break;
-            }
+            case 'P':
+                server_conf.rcvport = optarg;
+                break;
+            case 'F':
+                server_conf.runmode = RUN_FOREGROUND;
+                break;
+            case 'D':
+                server_conf.media_dir = optarg;
+                break;
+            case 'I':
+                server_conf.ifname = optarg;
+                break;
+            case 'H':
+                printfhelp();
+                exit(0);
+                break;
+            default:
+                abort();
+                break;
         }
+    }
 
     /*守护进程的实现*/
     if (server_conf.runmode == RUN_DAEMON) {
@@ -199,7 +203,6 @@ int main(int argc, char *argv[])
     socket_init();
 
     /*获取频道信息*/
-    struct mlib_listentry_st *list;
     int list_size;
     int err;
 

@@ -63,7 +63,8 @@ static struct channel_context_st *path2entry(const char *path)
         return NULL;
     }
 
-    me->tbf = mytbf_init(MP3_BITRATE/8, MP3_BITRATE/8*10);
+    //me->tbf = mytbf_init(MP3_BITRATE/8, MP3_BITRATE/8*10);
+    me->tbf = mytbf_init(MP3_BITRATE/8*5, MP3_BITRATE/8*10);//不同的mp3歌曲速率可能不同,如果你在真机上听到的声音是断断续续的,请调大速率(或者方法二,在client端进行缓冲机制,在接收到足够包之后,再开始播放)
     if (me->tbf == NULL)
     {
         syslog(LOG_ERR, "mytbf_init():%s\n", strerror(errno));
@@ -128,19 +129,20 @@ int mlib_getchnlist(struct mlib_listentry_st **result, int *resnum)
     
     for (int i = 0; i < globres.gl_pathc; i++)
     {
+        // globres.gl_pathv[i] -> "/home/kalipy/gg/media/ch1"
         res = path2entry(globres.gl_pathv[i]);
         if (res != NULL)
         {
-            syslog(LOG_DEBUG, "path2entry() returned [%d %s]", res->chnid, res->desc);
+            syslog(LOG_DEBUG, "path2entry() returned : %d %s.", res->chnid, res->desc);
             memcpy(channel + res->chnid, res, sizeof(*res));
             ptr[num].chnid = res->chnid;
             ptr[num].desc = strdup(res->desc);
+            num++;
         }
-        num++;
     }
 
     *result = realloc(ptr, sizeof(struct mlib_listentry_st) * num);
-    if (*resnum == NULL)
+    if (*result == NULL)
     {
         syslog(LOG_ERR, "realloc() failed.");
     }

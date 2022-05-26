@@ -126,6 +126,11 @@ mytbf_t *mytbf_init(int cps, int burst)
     return me;
 }
 
+static int min(int a, int b)
+{
+    return a < b ? a: b;
+}
+
 int mytbf_fetchtoken(mytbf_t *ptr, int size)
 {
     int n;

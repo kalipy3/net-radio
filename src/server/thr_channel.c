@@ -43,6 +43,8 @@ static void *thr_channel_snder(void *ptr)
         if (sendto(serversd, sbufp, len + sizeof(chnid_t), 0, (void *)&sndaddr, sizeof(sndaddr)) < 0)
         {
             syslog(LOG_ERR, "thr_channel(%d):sendto():%s", ent->chnid, strerror(errno));
+        } else {
+            syslog(LOG_DEBUG, "thr_channel(%d): sendto() successed.", ent->chnid);
         }
 
         sched_yield();
@@ -51,7 +53,7 @@ static void *thr_channel_snder(void *ptr)
     pthread_exit(NULL);
 }
 
-int chr_channel_create(struct mlib_listentry_st *ptr)
+int thr_channel_create(struct mlib_listentry_st *ptr)
 {
     int err;
 
@@ -68,7 +70,7 @@ int chr_channel_create(struct mlib_listentry_st *ptr)
     return 0;
 }
 
-int chr_channel_destroy(struct mlib_listentry_st *ptr) 
+int thr_channel_destroy(struct mlib_listentry_st *ptr) 
 {
     for (int i = 0; i < CHNNR; i++)
     {
@@ -87,7 +89,7 @@ int chr_channel_destroy(struct mlib_listentry_st *ptr)
 
 }
 
-int chr_channel_destroyall(void) 
+int thr_channel_destroyall(void) 
 {
     for (int i = 0; i < CHNNR; i++)
     {
