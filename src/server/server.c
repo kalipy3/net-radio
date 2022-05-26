@@ -22,6 +22,7 @@
 #include "../include/proto.h"
 #include "server_conf.h"
 #include "server.h"
+#include "medialib.h"
 
 /*
  * -M   指定多播组
@@ -187,10 +188,29 @@ int main(int argc, char *argv[])
     socket_init();
 
     /*获取频道信息*/
+    struct mlib_listentry_st *list;
+    int list_size;
+    int err;
+
+    err = mlib_getchnlist(&list, &list_size);
+    if (err)
+    {
+
+    }
 
     /*创建节目单线程*/
+    thr_list_create(list, list_size);
+    //if error
 
     /*创建频道线程*/
+    int i;
+    for (i = 0; i < list_size; i++)
+    {
+        thr_channel_create(list + i);    
+        //if error
+    }
+
+    syslog(LOG_DEBUG, "%d channel threads created.", i);
 
     while (1)
         pause();
