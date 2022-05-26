@@ -56,6 +56,9 @@ static void printfhelp(void)
 
 static void daemon_exit(int s)
 {
+    thr_list_destroy();
+    thr_channel_destroyall();
+
     closelog();
 
     exit(0);
